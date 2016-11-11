@@ -16,7 +16,9 @@
 #include <math.h>
 #include <time.h>
 
-//GRANTWRA
+/*
+	Author: Grant Wrazen
+*/
 
 //top file layout
 //1st line : total num of servers
@@ -28,6 +30,10 @@
 #define RESET   "\033[0m"
 #define RED     "\033[31m"      /* Red */
 
+/*
+	Peer info stuct, this will because an array of struct 
+	to hold neighbor information
+*/
 struct peer_info {
 	char name[30];
 	char ip_address[30];
@@ -35,15 +41,14 @@ struct peer_info {
 	int id;
 };
 
-struct recieved_datagram	{
-
-	char recipient_ip[30];
-	char recipient_port[30];
-	uint16_t recipient_id;
-	uint64_t recipient_cost;
-
-};
-
+/*
+	This is the structure that get sent across UDP. It packs
+	all fields into the predefined sizes as specified in the 
+	PDF. Using uit16_t for 2 byte fields, uint64_t for cost
+	fields, and sockaddr_in stucts for ip and port fields
+	because calls like 'inet_pton()' exist to packet ip
+	address' to the correct size.
+*/
 struct datagram
 {
 	uint16_t num_of_fields;
@@ -80,6 +85,9 @@ char my_listen_port[30];
 char my_ip[30];
 char *num_of_neighbors;
 
+/*
+	Helper function to find who is what ip address.
+*/
 char *findIpName(char *ip_address){
 	if(strcmp(ip_address,"128.205.36.8") == 0){ return "timberlake.cse.buffalo.edu"; }
 	if(strcmp(ip_address,"128.205.36.33") == 0){ return "highgate.cse.buffalo.edu"; }
@@ -91,6 +99,9 @@ char *findIpName(char *ip_address){
 
 }
 
+/*
+	Ugly print of the routing diagram. (Only used for testing)
+*/
 void print_routing_diagram(int routing_diagram[5][5]){
 	printf("\n");
 	int i;
@@ -108,6 +119,10 @@ void print_routing_diagram(int routing_diagram[5][5]){
 	}
 }
 
+/*
+	Function to pretty print this servers current routing diagram.
+	Called when user input display.
+*/
 void pretty_print_routing_diagram(int routing_diagram[5][5]){
 	printf("\n");
 	printf("     1. 2. 3. 4. 5.\n");
@@ -128,6 +143,9 @@ void pretty_print_routing_diagram(int routing_diagram[5][5]){
 	}
 }
 
+/*
+	Helper function to print out all neighboring servers info from list.
+*/
 void print_servers(struct peer_info peer_info_array[5]){
 	int i;
 	for(i = 1; i <= 5; i ++){
@@ -140,6 +158,9 @@ void print_servers(struct peer_info peer_info_array[5]){
 	}
 }
 
+/*
+	Helper function to create a listening socket.
+*/
 int create_socket(char *port){
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -171,6 +192,11 @@ int create_socket(char *port){
 	return sock;
 }
 
+/*
+	Function to send a message as a string (instead of a datagram packet).
+	Right not this is never used (except for testing) and will most
+	likely stay that way.
+*/
 int send_mes(int reciever_id, char *msg, struct peer_info peer_info_array[5]){
 
 	struct addrinfo hints;
@@ -212,6 +238,10 @@ int send_mes(int reciever_id, char *msg, struct peer_info peer_info_array[5]){
 	return 0;
 }
 
+/*
+	Function to create a UDP socket and send the predefined datagram to a
+	defined user.
+*/
 int send_broadcast(int reciever_id, struct datagram *mydatagram, struct peer_info peer_info_array[5]){
 
 	struct addrinfo hints;
@@ -253,6 +283,10 @@ int send_broadcast(int reciever_id, struct datagram *mydatagram, struct peer_inf
 	return 0;
 }
 
+/*
+	Function to compact a small datagram packet in the event of
+	disabling a server connection.
+*/
 struct datagram *fill_datagram_disable(int who,int me){
 	struct datagram *mydatagram = malloc(sizeof(struct datagram));
 
@@ -263,6 +297,10 @@ struct datagram *fill_datagram_disable(int who,int me){
 	return mydatagram;
 }
 
+/*
+	Function to compact a small datagram packet in the event of a
+	simulated crash.
+*/
 struct datagram *fill_datagram_crash(int me){
 	struct datagram *mydatagram = malloc(sizeof(struct datagram));
 
@@ -272,6 +310,11 @@ struct datagram *fill_datagram_crash(int me){
 	return mydatagram;
 }
 
+/*
+	Function to create a 'datagram' structure. Which will compact all the
+	information required for an update packet in the pdf defined General
+	Message Format.
+*/
 struct datagram *fill_datagram(struct peer_info peer_info_array[5], int routing_diagram[5][5]){
 	struct datagram *mydatagram = malloc(sizeof(struct datagram));
 
@@ -407,7 +450,10 @@ struct datagram *fill_datagram(struct peer_info peer_info_array[5], int routing_
 	return mydatagram;
 }
 
-//flag defines operation : 0 normal, 1 crash, 2 disable <flag2>
+/*
+	Function to broadcast an update packet to all neighboring servers
+	Note: flag defines operation : 0 normal, 1 crash, 2 disable <flag2>
+*/
 int broadcast(struct peer_info peer_info_array[5], int routing_diagram[5][5],int flag, int flag2){
 
 	struct datagram *yo;
@@ -433,6 +479,10 @@ int broadcast(struct peer_info peer_info_array[5], int routing_diagram[5][5],int
 	return 0;
 }
 
+/*
+	Helper function thats called when select sees user input, then determines what
+	was typed, and calls the correct function depending on the input.
+*/
 int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 	
 	char *input;
@@ -565,6 +615,9 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 	return 0;
 }
 
+/*
+	Helper function to update the routing diagram when an update packet is recieved.
+*/
 void update_routing_diagram(struct datagram mydatagram,struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 
 	int count = mydatagram.num_of_fields;
@@ -632,6 +685,12 @@ void update_routing_diagram(struct datagram mydatagram,struct peer_info peer_inf
 	}
 }
 
+/*
+	This function is the 'main' loop, it contains the select syscall. It handles
+	the broadcast on a specified timer, reading user input and calling the
+	appropriate function, and reading from an active listening socket, calling
+	functions as needed.
+*/
 int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 	fd_set master;
 	fd_set fd_readSockets;
@@ -711,6 +770,10 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 	return 0;
 }
 
+/*
+	Function to read from the specified topology file and use this
+	info to fill the initial data structures.
+*/
 int read_top(char *top_file,struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 	
 	FILE * fp;
@@ -808,6 +871,12 @@ int read_top(char *top_file,struct peer_info peer_info_array[5],int routing_diag
 	return 0;	
 }
 
+/*
+	This is where the program begins. It will set up the data structures needed,
+	then call the function to read the topology file and load info into the
+	structures, then call the function to set up the listening socket,
+	and finally move onto the main loop. (Also will check the input flags)
+*/
 int main(int argc, char *argv[]){
 
 	char temptime[30];
