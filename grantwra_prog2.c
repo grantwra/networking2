@@ -29,6 +29,7 @@
 #define BUFFER_SIZE BUFSIZ 512
 #define RESET   "\033[0m"
 #define RED     "\033[31m"      /* Red */
+#define BLUE	"\033[34m"
 
 /*
 	Peer info stuct, this will because an array of struct 
@@ -39,6 +40,7 @@ struct peer_info {
 	char ip_address[30];
 	char port[30];
 	int id;
+	int death;
 };
 
 /*
@@ -124,9 +126,37 @@ void print_routing_diagram(int routing_diagram[5][5]){
 	Called when user input display.
 */
 void pretty_print_routing_diagram(int routing_diagram[5][5]){
+	/*
+	int newdiagram[5][5];
+	int iv,ik;
+	for(iv = 1; iv <= 5; iv++){
+		for(ik =1;ik<=5;ik++){
+			newdiagram[iv][ik] = -1;
+		}
+	}
+
+	for(iv = 1; iv <= 5; iv++){
+		for(ik =1;ik<=5;ik++){
+			newdiagram[iv][ik] = routing_diagram[iv][ik];
+		}
+	}
+	
+	int count = 5;
+	while(count != 0){
+		int q;
+		int temp[5];
+		for(q =0;q<=5;q++){
+			temp[q] = newdiagram[count][q];
+		}
+		for(q =0;q<=5;q++){
+			newdiagram[q][count] = temp[q];
+		}
+		count--;
+	}
+	*/
 	printf("\n");
 	printf("     1. 2. 3. 4. 5.\n");
-	printf("    ______________\n");
+	printf("    ________________\n");
 	int i;
 	int j;
 	for(i = 1; i <=5; i++){
@@ -137,7 +167,15 @@ void pretty_print_routing_diagram(int routing_diagram[5][5]){
 				break;
 			}
 			else {
-				printf("%d ", routing_diagram[j][i]);
+				//printf("I AM HERE\n");
+				if(i == who_am_i || j == who_am_i){
+					printf(RED"%d "RESET, routing_diagram[j][i]);
+					//printf(RED"%d "RESET, newdiagram[j][i]);
+				}
+				else {
+					printf("%d ", routing_diagram[j][i]);
+					//printf("%d ", newdiagram[j][i]);
+				}
 			}
 		}
 	}
@@ -150,6 +188,7 @@ void print_servers(struct peer_info peer_info_array[5]){
 	int i;
 	for(i = 1; i <= 5; i ++){
 		if(peer_info_array[i].id > 0){
+			printf("i : %d\n", i);
 			printf("Server id: %d\n",peer_info_array[i].id);
 			printf("Server ip: %s\n",peer_info_array[i].ip_address);
 			printf("Server port: %s\n",peer_info_array[i].port);
@@ -190,6 +229,50 @@ int create_socket(char *port){
 	printf("Listening on port %s!!\n", port);
 
 	return sock;
+}
+
+/*
+	Helper function to mirror the routing table
+*/
+void mirror(int routing_diagram[5][5]){
+	int i;
+	int j;
+	
+	int count = 0;
+	int temp[5];
+	for(i = 0; i <=5; i++){
+		temp[i] = 0;
+	}
+
+	for(i = 1; i <= 5; i++){
+		for(j = 1; j<=5;j++){
+			if(routing_diagram[i][j] == -1){
+				count++;
+			}
+		}
+		if(count == 5){
+			temp[i] = 1;
+		}
+		count = 0;
+	}
+	for(i = 1; i <=5;i++){
+		if(temp[i] == 1){
+			for(j = 1; j <=5;j++){
+				routing_diagram[j][i] = -1;
+				routing_diagram[i][j] = -1;
+			}
+		}
+	}
+	
+	for(i = 1; i <= 5; i++){
+		for(j=1; j <=5; j++){
+			if(routing_diagram[j][i] != -1){
+				routing_diagram[i][j] = routing_diagram[j][i]; 
+			}
+		}
+	}
+
+
 }
 
 /*
@@ -301,6 +384,7 @@ struct datagram *fill_datagram_disable(int who,int me){
 	Function to compact a small datagram packet in the event of a
 	simulated crash.
 */
+	/*
 struct datagram *fill_datagram_crash(int me){
 	struct datagram *mydatagram = malloc(sizeof(struct datagram));
 
@@ -309,6 +393,7 @@ struct datagram *fill_datagram_crash(int me){
 
 	return mydatagram;
 }
+*/
 
 /*
 	Function to create a 'datagram' structure. Which will compact all the
@@ -452,13 +537,14 @@ struct datagram *fill_datagram(struct peer_info peer_info_array[5], int routing_
 
 /*
 	Function to broadcast an update packet to all neighboring servers
-	Note: flag defines operation : 0 normal, 1 crash, 2 disable <flag2>
+	Note: flag defines operation : 0 normal, 2 disable <flag2>
 */
 int broadcast(struct peer_info peer_info_array[5], int routing_diagram[5][5],int flag, int flag2){
 
 	struct datagram *yo;
 	if(flag == 1){
-		yo = fill_datagram_crash(who_am_i);
+		//yo = fill_datagram_crash(who_am_i);
+		//Do nothing! you are crashing!
 	}
 	else if(flag == 2){
 		yo = fill_datagram_disable(flag2,who_am_i);
@@ -529,16 +615,22 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		pretty_print_routing_diagram(routing_diagram);
 		printf("DISPLAY SUCCESS\n");
 	}
+	else if(strncmp(input,"print\n",40) == 0){
+		print_servers(peer_info_array);
+		//pretty_print_routing_diagram(routing_diagram);
+		//printf("DISPLAY SUCCESS\n");
+	}
 	else if(strncmp(input,"display\n",40) == 0){
+		//mirror(routing_diagram);
 		pretty_print_routing_diagram(routing_diagram);
 		printf("display SUCCESS\n");
 	}
 	else if(strncmp(input,"CRASH\n",40) == 0){
-		broadcast(peer_info_array,routing_diagram,1,0);
+		//broadcast(peer_info_array,routing_diagram,1,0);
 		return 1;
 	}
 	else if(strncmp(input,"crash\n",40) == 0){
-		broadcast(peer_info_array,routing_diagram,1,0);
+		//broadcast(peer_info_array,routing_diagram,1,0);
 		return 1;
 	}
 
@@ -552,13 +644,46 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 	}
 	else if(strncmp(input,"disable",40) == 0){
 		int temp = atoi(input2);
+		//if(strncmp(peer_info_array[temp].ip_address,"None",30) == 0){
+		
+		//}
+		//else {
+		//	printf("%d is not your neighbor! :p\n", temp);
+		//	return 0;
+		//}
+		if(temp == who_am_i){
+			printf("%d is yourself moron!\n", temp);
+			return 0;
+		}
+		if(peer_info_array[temp].id > 0){
+
+		}
+		
+		else {
+			printf("%d is not your neighbor!\n", temp);
+			return 0;
+		}
 		broadcast(peer_info_array,routing_diagram,2,temp);
 		routing_diagram[temp][who_am_i] = -1;
+		routing_diagram[who_am_i][temp] = -1;
 	}
 	else if(strncmp(input,"DISABLE",40) == 0){
 		int temp = atoi(input2);
+		if(temp == who_am_i){
+			printf("%d is yourself moron!\n", temp);
+			return 0;
+		}
+		if(peer_info_array[temp].id > 0){
+
+		}
+		
+		else {
+			printf("%d is not your neighbor!\n", temp);
+			return 0;
+		}
 		broadcast(peer_info_array,routing_diagram,2,temp);
 		routing_diagram[temp][who_am_i] = -1;
+		routing_diagram[who_am_i][temp] = -1;
 	}
 	else if(strncmp(input,"update",40) == 0){
 		if(input2 == NULL || input3 == NULL || input4 == NULL){
@@ -569,6 +694,7 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 			int i1 = atoi(input2);
 			int i2 = atoi(input3);
 			routing_diagram[i2][i1] = -1;
+			routing_diagram[i1][i2] = -1;
 			printf("update SUCCESS\n");
 			return 0;
 		}
@@ -577,6 +703,7 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		int i2 = atoi(input3);
 		int i3 = atoi(input4);
 		routing_diagram[i2][i1] = i3;
+		routing_diagram[i1][i2] = i3;
 		printf("update SUCCESS\n");
 
 	}
@@ -589,6 +716,7 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 			int i1 = atoi(input2);
 			int i2 = atoi(input3);
 			routing_diagram[i2][i1] = -1;
+			routing_diagram[i1][i2] = -1;
 			printf("UPDATE SUCCESS\n");
 			return 0;
 		}
@@ -597,6 +725,7 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		int i2 = atoi(input3);
 		int i3 = atoi(input4);
 		routing_diagram[i2][i1] = i3;
+		routing_diagram[i1][i2] = i3;
 		printf("UPDATE SUCCESS\n");
 
 	}
@@ -657,6 +786,7 @@ void update_routing_diagram(struct datagram mydatagram,struct peer_info peer_inf
 		count--;
 	}
 	printf("RECEIVED A MESSAGE FROM SERVER %hu\n", sender_id);
+	peer_info_array[sender_id].death = 0;
 
 	count = mydatagram.num_of_fields;
 
@@ -721,6 +851,24 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
     	}
  
     	if(times >= time_interval){
+    		int iq;
+    		for(iq = 1; iq <=5; iq++){
+    			if(iq == who_am_i){
+    				continue;
+    			}
+    			peer_info_array[iq].death++;
+    			if(peer_info_array[iq].death == 3){
+    				//routing_diagram[iq][who_am_i] = -1;
+    				int it;
+    				for(it = 1; it <= 5; it++){
+    					routing_diagram[iq][it] = -1;
+    					routing_diagram[it][iq] = -1;
+    				}
+    				//mirror(routing_diagram);
+    			}
+    			//mirror(routing_diagram);
+    		}
+    		//mirror(routing_diagram);
     		times = 0.0;
     		broadcast(peer_info_array,routing_diagram,0,0);
     	}
@@ -746,6 +894,7 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 			socklen_t recieved_length = sizeof(addr);
 			int bytes_read;
 			bytes_read = recvfrom(my_listen_fd,&mydatagram,sizeof(struct datagram),0,&addr,&recieved_length);
+			/*
 			if(mydatagram.num_of_fields == 15){
 				int ix;
 				for(ix = 1; ix <= 5; ix++){
@@ -753,11 +902,15 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 				}
 				continue;
 			}
+			*/
 			if(mydatagram.num_of_fields == 20){
 				routing_diagram[mydatagram.recipient1_id][mydatagram.recipient2_id] = -1;
+				routing_diagram[mydatagram.recipient2_id][mydatagram.recipient1_id] = -1;
+				mirror(routing_diagram);
 				continue;
 			}
 			update_routing_diagram(mydatagram,peer_info_array,routing_diagram);
+			mirror(routing_diagram);
 			time(&stop);
     		times = times + difftime(stop,start);
 		}
@@ -766,6 +919,22 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 		}
 
     	if(breaker != 0){ break; }
+    	/*
+    	int iq;
+    	for(iq = 1; iq <=5; iq++){
+    		if(iq == who_am_i){
+    			continue;
+    		}
+    		peer_info_array[iq].death++;
+    		if(peer_info_array[iq].death == 3){
+    			//routing_diagram[iq][who_am_i] = -1;
+    			int it;
+    			for(it = 1; it <= 5; it++){
+    				routing_diagram[it][iq] = -1;
+    			}
+    		}
+    	}
+    	*/
     }
 	return 0;
 }
@@ -825,6 +994,7 @@ int read_top(char *top_file,struct peer_info peer_info_array[5],int routing_diag
 			strcpy(newpeerinfo.ip_address, ipadd);
 			strcpy(newpeerinfo.port, l_port);
 			newpeerinfo.id = idint;
+			newpeerinfo.death = 0;
 			char *nameof = findIpName(ipadd);
 			strcpy(newpeerinfo.name, nameof);
 			peer_info_array[idint] = newpeerinfo;
@@ -896,6 +1066,7 @@ int main(int argc, char *argv[]){
 	strncpy(null.name,"None",30);
 	strncpy(null.ip_address,"None",30);
 	strncpy(null.port,"None",30);
+	null.death = 0;
 	null.id = -1;
 	int i;
 	for(i = 0; i <= 5; i++){
@@ -912,6 +1083,7 @@ int main(int argc, char *argv[]){
 	read_top(top_file, peer_info_array,routing_diagram);
 	my_listen_fd = create_socket(my_listen_port);
 	packet_count = 0;
+	mirror(routing_diagram);
 	server_start(peer_info_array, routing_diagram);
 	return 0;
 }
