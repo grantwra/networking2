@@ -86,6 +86,12 @@ int my_listen_fd;
 char my_listen_port[30];
 char my_ip[30];
 char *num_of_neighbors;
+int num_in_network;
+int s1;
+int s2;
+int s3;
+int s4;
+int s5;
 
 /*
 	Helper function to find who is what ip address.
@@ -126,35 +132,6 @@ void print_routing_diagram(int routing_diagram[6][6]){
 	Called when user input display.
 */
 void pretty_print_routing_diagram(int routing_diagram[6][6]){
-	
-	/*
-	int newdiagram[5][5];
-	int iv,ik;
-	for(iv = 1; iv <= 5; iv++){
-		for(ik =1;ik<=5;ik++){
-			newdiagram[iv][ik] = -1;
-		}
-	}
-
-	for(iv = 1; iv <= 5; iv++){
-		for(ik =1;ik<=5;ik++){
-			newdiagram[iv][ik] = routing_diagram[iv][ik];
-		}
-	}
-	
-	int count = 5;
-	while(count != 0){
-		int q;
-		int temp[5];
-		for(q =0;q<=5;q++){
-			temp[q] = newdiagram[count][q];
-		}
-		for(q =0;q<=5;q++){
-			newdiagram[q][count] = temp[q];
-		}
-		count--;
-	}
-	*/
 	printf("\n");
 	printf("     1. 2. 3. 4. 5.\n");
 	printf("    ________________\n");
@@ -168,14 +145,11 @@ void pretty_print_routing_diagram(int routing_diagram[6][6]){
 				break;
 			}
 			else {
-				//printf("I AM HERE\n");
 				if(i == who_am_i || j == who_am_i){
 					printf(RED"%d "RESET, routing_diagram[j][i]);
-					//printf(RED"%d "RESET, newdiagram[j][i]);
 				}
 				else {
 					printf("%d ", routing_diagram[j][i]);
-					//printf("%d ", newdiagram[j][i]);
 				}
 			}
 		}
@@ -198,7 +172,12 @@ void print_servers(struct peer_info peer_info_array[6]){
 	}
 }
 
+/*
+	My implementation of the Bellman-Ford Algorithm
+*/
 void bellmanford(int routing_diagram[6][6],int whoami){
+
+	//printf("RUNNING BELLMAN FORD\n");
 
 	int i,j;
 
@@ -219,38 +198,16 @@ void bellmanford(int routing_diagram[6][6],int whoami){
 	int xi;
 	for(xi = 1; xi <=5;xi++){
 		for(i = 1; i <=5; i++){
-		//int counter = 0;
-		//while((i-1) != whoami){
-			//if(counter == 5){ break; }
-		//	int counter2 = 0;
 			for(j =1; j<=5;j++){
-			//while((j-1) != whoami){
-			//	if(counter2 == 5){ break; }
 				if(routing_diagram[i][j] != -1){
 					if((bestcost[i] + routing_diagram[i][j]) < bestcost[j]){
-						if(i == 4 || j == 4){
-						//printf("bestcost[i] = %d \n routing_diagram[i][j] = %d \n bestcost[j] = %d \n", bestcost[i], routing_diagram[i][j], bestcost[j]);
-						}
 						bestcost[j] = bestcost[i] + routing_diagram[i][j];
 					}
 				}
-			//	if(j == 5){ i = 0; }
-			//	j++;
-			//	counter2++;
-			}
-			//if(i == 5){ i = 0; }
-			//i++;
-			//counter++;
-			
+			}			
 		}
 	}
 
-	/*
-	printf("From: %d\n", whoami);
-	for(i = 1; i<=5;i++){
-		printf("Space: %d with Cost: %d\n", i, bestcost[i]);
-	}
-	*/
 	for(i = 1; i <= 5; i++){
 		if(bestcost[i] == 190567421){
 			routing_diagram[i][whoami] = -1;
@@ -258,6 +215,24 @@ void bellmanford(int routing_diagram[6][6],int whoami){
 		else {
 			routing_diagram[i][whoami] = bestcost[i];
 			routing_diagram[whoami][i] = bestcost[i];
+		}
+	}
+
+	for(i = 1; i <=5;i++){
+		if(i == 1){
+			routing_diagram[i][i] = s1;
+		}
+		if(i == 2){
+			routing_diagram[i][i] = s2;
+		}
+		if(i == 3){
+			routing_diagram[i][i] = s3;
+		}
+		if(i == 4){
+			routing_diagram[i][i] = s4;
+		}
+		if(i == 5){
+			routing_diagram[i][i] = s5;
 		}
 	}
 
@@ -310,9 +285,6 @@ void mirror(int routing_diagram[6][6]){
 		temp[i] = 0;
 	}
 
-	//routing_diagram[6][6] = 50;
-	//printf("1\n");
-
 	for(i = 1; i <= 5; i++){
 		for(j = 1; j<=5;j++){
 			if(routing_diagram[i][j] == -1){
@@ -324,7 +296,7 @@ void mirror(int routing_diagram[6][6]){
 		}
 		count = 0;
 	}
-	//printf("2\n");
+
 	for(i = 1; i <=5;i++){
 		if(temp[i] == 1){
 			for(j = 1; j <=5;j++){
@@ -333,7 +305,6 @@ void mirror(int routing_diagram[6][6]){
 			}
 		}
 	}
-	//printf("3\n");
 	
 	for(i = 1; i <= 5; i++){
 		for(j=1; j <=5; j++){
@@ -342,8 +313,6 @@ void mirror(int routing_diagram[6][6]){
 			}
 		}
 	}
-
-
 }
 
 /*
@@ -450,21 +419,6 @@ struct datagram *fill_datagram_disable(int who,int me){
 
 	return mydatagram;
 }
-
-/*
-	Function to compact a small datagram packet in the event of a
-	simulated crash.
-*/
-	/*
-struct datagram *fill_datagram_crash(int me){
-	struct datagram *mydatagram = malloc(sizeof(struct datagram));
-
-	mydatagram->num_of_fields = 15;
-	mydatagram->recipient1_id = me;
-
-	return mydatagram;
-}
-*/
 
 /*
 	Function to create a 'datagram' structure. Which will compact all the
@@ -614,7 +568,6 @@ int broadcast(struct peer_info peer_info_array[6], int routing_diagram[6][6],int
 
 	struct datagram *yo;
 	if(flag == 1){
-		//yo = fill_datagram_crash(who_am_i);
 		//Do nothing! you are crashing!
 	}
 	else if(flag == 2){
@@ -690,15 +643,7 @@ int run_command(char *fullinput, struct peer_info peer_info_array[6],int routing
 		pretty_print_routing_diagram(routing_diagram);
 		printf("DISPLAY SUCCESS\n");
 	}
-	/*
-	else if(strncmp(input,"print\n",40) == 0){
-		print_servers(peer_info_array);
-		//pretty_print_routing_diagram(routing_diagram);
-		//printf("DISPLAY SUCCESS\n");
-	}
-	*/
 	else if(strncmp(input,"display\n",40) == 0){
-		//mirror(routing_diagram);
 		int ij;
 		for(ij = 1; ij <=5; ij++){
 			bellmanford(routing_diagram,ij);
@@ -707,12 +652,10 @@ int run_command(char *fullinput, struct peer_info peer_info_array[6],int routing
 		printf("display SUCCESS\n");
 	}
 	else if(strncmp(input,"CRASH\n",40) == 0){
-		//broadcast(peer_info_array,routing_diagram,1,0);
 		printf("CRASH SUCCESS\n");
 		return 1;
 	}
 	else if(strncmp(input,"crash\n",40) == 0){
-		//broadcast(peer_info_array,routing_diagram,1,0);
 		printf("crash SUCCESS\n");
 		return 1;
 	}
@@ -727,13 +670,6 @@ int run_command(char *fullinput, struct peer_info peer_info_array[6],int routing
 	}
 	else if(strncmp(input,"disable",40) == 0){
 		int temp = atoi(input2);
-		//if(strncmp(peer_info_array[temp].ip_address,"None",30) == 0){
-		
-		//}
-		//else {
-		//	printf("%d is not your neighbor! :p\n", temp);
-		//	return 0;
-		//}
 		if(temp == who_am_i){
 			printf("%d is yourself moron!\n", temp);
 			return 0;
@@ -947,7 +883,7 @@ int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 	float times = 0.0;
 	while (1) {
 		struct timeval timer;
-    	timer.tv_sec = 1; //time_interval;
+    	timer.tv_sec = 1;
    		timer.tv_usec = 0;
 		
     	FD_ZERO(&fd_readSockets);
@@ -955,7 +891,6 @@ int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
     	time_t start, stop;
     	time(&start);
     	if(select(max_fd+1,&fd_readSockets,NULL,NULL,&timer) == -1){
-    	//if(selector == -1){
     		printf("SHOWS OVER\n");
     		break;
     	}
@@ -968,17 +903,13 @@ int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
     			}
     			peer_info_array[iq].death++;
     			if(peer_info_array[iq].death == 3){
-    				//routing_diagram[iq][who_am_i] = -1;
     				int it;
     				for(it = 1; it <= 5; it++){
     					routing_diagram[iq][it] = -1;
     					routing_diagram[it][iq] = -1;
     				}
-    				//mirror(routing_diagram);
     			}
-    			//mirror(routing_diagram);
     		}
-    		//mirror(routing_diagram);
     		times = 0.0;
     		broadcast(peer_info_array,routing_diagram,0,0);
     	}
@@ -1004,27 +935,15 @@ int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 			socklen_t recieved_length = sizeof(addr);
 			int bytes_read;
 			bytes_read = recvfrom(my_listen_fd,&mydatagram,sizeof(struct datagram),0,&addr,&recieved_length);
-			/*
-			if(mydatagram.num_of_fields == 15){
-				int ix;
-				for(ix = 1; ix <= 5; ix++){
-					routing_diagram[ix][mydatagram.recipient1_id] = -1;
-				}
-				continue;
-			}
-			*/
+	
 			if(mydatagram.num_of_fields == 20){
 				routing_diagram[mydatagram.recipient1_id][mydatagram.recipient2_id] = -1;
 				routing_diagram[mydatagram.recipient2_id][mydatagram.recipient1_id] = -1;
 				mirror(routing_diagram);
-				//int ix;
-				//for(ix =1; ix <=5;ix++){
 				int ix;
 				for(ix = 1; ix<=5;ix++){
 					bellmanford(routing_diagram,ix);
 				}
-				//mirror(routing_diagram);
-				//}
 				continue;
 			}
 			update_routing_diagram(mydatagram,peer_info_array,routing_diagram);
@@ -1032,7 +951,6 @@ int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 			int ix;
 			for(ix =1; ix <=5;ix++){
 				bellmanford(routing_diagram,ix);
-			//mirror(routing_diagram);
 			}
 			time(&stop);
     		times = times + difftime(stop,start);
@@ -1042,22 +960,7 @@ int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 		}
 
     	if(breaker != 0){ break; }
-    	/*
-    	int iq;
-    	for(iq = 1; iq <=5; iq++){
-    		if(iq == who_am_i){
-    			continue;
-    		}
-    		peer_info_array[iq].death++;
-    		if(peer_info_array[iq].death == 3){
-    			//routing_diagram[iq][who_am_i] = -1;
-    			int it;
-    			for(it = 1; it <= 5; it++){
-    				routing_diagram[it][iq] = -1;
-    			}
-    		}
-    	}
-    	*/
+
     }
 	return 0;
 }
@@ -1084,6 +987,7 @@ int read_top(char *top_file,struct peer_info peer_info_array[6],int routing_diag
     while ((read = getline(&line, &len, fp)) != -1) {
         if(count == 0){
         	num_to_put_in_array = atoi(line);
+        	num_in_network = num_to_put_in_array;
         }
         else if(count == 1){
 
@@ -1175,7 +1079,11 @@ int main(int argc, char *argv[]){
 	char temptime[30];
 	strncpy(temptime,argv[4],sizeof(argv[4]) - sizeof("\n"));
 	time_interval = atoi(temptime);
-
+	s1 = -1;
+	s2 = -1;
+	s3 = -1;
+	s4 = -1;
+	s5 = -1;
 	struct peer_info *peer_info_array = malloc(sizeof(struct peer_info ) * 6);
 	int routing_diagram[6][6];
 	int j;
@@ -1204,6 +1112,24 @@ int main(int argc, char *argv[]){
 	char *top_file = argv[2];
 	char *interval = argv[4];
 	read_top(top_file, peer_info_array,routing_diagram);
+	int yt;
+	for(yt = 1; yt <= num_in_network; yt++){
+		if(yt == 1){
+			s1 = 0;
+		}
+		if(yt == 2){
+			s2 = 0;
+		}
+		if(yt == 3){
+			s3 = 0;
+		}
+		if(yt == 4){
+			s4 = 0;
+		}
+		if(yt == 5){
+			s5 = 0;
+		}
+	}
 	my_listen_fd = create_socket(my_listen_port);
 	packet_count = 0;
 	mirror(routing_diagram);
