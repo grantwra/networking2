@@ -104,7 +104,7 @@ char *findIpName(char *ip_address){
 /*
 	Ugly print of the routing diagram. (Only used for testing)
 */
-void print_routing_diagram(int routing_diagram[5][5]){
+void print_routing_diagram(int routing_diagram[6][6]){
 	printf("\n");
 	int i;
 	int j;
@@ -125,7 +125,8 @@ void print_routing_diagram(int routing_diagram[5][5]){
 	Function to pretty print this servers current routing diagram.
 	Called when user input display.
 */
-void pretty_print_routing_diagram(int routing_diagram[5][5]){
+void pretty_print_routing_diagram(int routing_diagram[6][6]){
+	
 	/*
 	int newdiagram[5][5];
 	int iv,ik;
@@ -184,7 +185,7 @@ void pretty_print_routing_diagram(int routing_diagram[5][5]){
 /*
 	Helper function to print out all neighboring servers info from list.
 */
-void print_servers(struct peer_info peer_info_array[5]){
+void print_servers(struct peer_info peer_info_array[6]){
 	int i;
 	for(i = 1; i <= 5; i ++){
 		if(peer_info_array[i].id > 0){
@@ -195,6 +196,71 @@ void print_servers(struct peer_info peer_info_array[5]){
 			printf("Server name: %s\n",peer_info_array[i].name);
 		}
 	}
+}
+
+void bellmanford(int routing_diagram[6][6],int whoami){
+
+	int i,j;
+
+	int bestcost[6];
+	int num_paths[6];
+	for(i = 0; i <=5;i++){
+		if(routing_diagram[whoami][i] == -1){
+			bestcost[i] = 190567421;
+			num_paths[i] = -1;
+			continue;
+		}
+		bestcost[i] = routing_diagram[whoami][i];
+		num_paths[i] = 1;
+	}
+
+	i = whoami;
+	j = whoami;
+	int xi;
+	for(xi = 1; xi <=5;xi++){
+		for(i = 1; i <=5; i++){
+		//int counter = 0;
+		//while((i-1) != whoami){
+			//if(counter == 5){ break; }
+		//	int counter2 = 0;
+			for(j =1; j<=5;j++){
+			//while((j-1) != whoami){
+			//	if(counter2 == 5){ break; }
+				if(routing_diagram[i][j] != -1){
+					if((bestcost[i] + routing_diagram[i][j]) < bestcost[j]){
+						if(i == 4 || j == 4){
+						//printf("bestcost[i] = %d \n routing_diagram[i][j] = %d \n bestcost[j] = %d \n", bestcost[i], routing_diagram[i][j], bestcost[j]);
+						}
+						bestcost[j] = bestcost[i] + routing_diagram[i][j];
+					}
+				}
+			//	if(j == 5){ i = 0; }
+			//	j++;
+			//	counter2++;
+			}
+			//if(i == 5){ i = 0; }
+			//i++;
+			//counter++;
+			
+		}
+	}
+
+	/*
+	printf("From: %d\n", whoami);
+	for(i = 1; i<=5;i++){
+		printf("Space: %d with Cost: %d\n", i, bestcost[i]);
+	}
+	*/
+	for(i = 1; i <= 5; i++){
+		if(bestcost[i] == 190567421){
+			routing_diagram[i][whoami] = -1;
+		}
+		else {
+			routing_diagram[i][whoami] = bestcost[i];
+			routing_diagram[whoami][i] = bestcost[i];
+		}
+	}
+
 }
 
 /*
@@ -234,15 +300,18 @@ int create_socket(char *port){
 /*
 	Helper function to mirror the routing table
 */
-void mirror(int routing_diagram[5][5]){
+void mirror(int routing_diagram[6][6]){
 	int i;
 	int j;
 	
 	int count = 0;
-	int temp[5];
+	int temp[6];
 	for(i = 0; i <=5; i++){
 		temp[i] = 0;
 	}
+
+	//routing_diagram[6][6] = 50;
+	//printf("1\n");
 
 	for(i = 1; i <= 5; i++){
 		for(j = 1; j<=5;j++){
@@ -255,6 +324,7 @@ void mirror(int routing_diagram[5][5]){
 		}
 		count = 0;
 	}
+	//printf("2\n");
 	for(i = 1; i <=5;i++){
 		if(temp[i] == 1){
 			for(j = 1; j <=5;j++){
@@ -263,6 +333,7 @@ void mirror(int routing_diagram[5][5]){
 			}
 		}
 	}
+	//printf("3\n");
 	
 	for(i = 1; i <= 5; i++){
 		for(j=1; j <=5; j++){
@@ -280,7 +351,7 @@ void mirror(int routing_diagram[5][5]){
 	Right not this is never used (except for testing) and will most
 	likely stay that way.
 */
-int send_mes(int reciever_id, char *msg, struct peer_info peer_info_array[5]){
+int send_mes(int reciever_id, char *msg, struct peer_info peer_info_array[6]){
 
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -325,7 +396,7 @@ int send_mes(int reciever_id, char *msg, struct peer_info peer_info_array[5]){
 	Function to create a UDP socket and send the predefined datagram to a
 	defined user.
 */
-int send_broadcast(int reciever_id, struct datagram *mydatagram, struct peer_info peer_info_array[5]){
+int send_broadcast(int reciever_id, struct datagram *mydatagram, struct peer_info peer_info_array[6]){
 
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -400,7 +471,7 @@ struct datagram *fill_datagram_crash(int me){
 	information required for an update packet in the pdf defined General
 	Message Format.
 */
-struct datagram *fill_datagram(struct peer_info peer_info_array[5], int routing_diagram[5][5]){
+struct datagram *fill_datagram(struct peer_info peer_info_array[6], int routing_diagram[6][6]){
 	struct datagram *mydatagram = malloc(sizeof(struct datagram));
 
 	mydatagram->num_of_fields = 0;
@@ -539,7 +610,7 @@ struct datagram *fill_datagram(struct peer_info peer_info_array[5], int routing_
 	Function to broadcast an update packet to all neighboring servers
 	Note: flag defines operation : 0 normal, 2 disable <flag2>
 */
-int broadcast(struct peer_info peer_info_array[5], int routing_diagram[5][5],int flag, int flag2){
+int broadcast(struct peer_info peer_info_array[6], int routing_diagram[6][6],int flag, int flag2){
 
 	struct datagram *yo;
 	if(flag == 1){
@@ -569,7 +640,7 @@ int broadcast(struct peer_info peer_info_array[5], int routing_diagram[5][5],int
 	Helper function thats called when select sees user input, then determines what
 	was typed, and calls the correct function depending on the input.
 */
-int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing_diagram[5][5]){
+int run_command(char *fullinput, struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 	
 	char *input;
 	char *input2;
@@ -612,25 +683,37 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		printf("packets SUCCESS\n");
 	}
 	else if(strncmp(input,"DISPLAY\n",40) == 0){
+		int ik;
+		for(ik = 1; ik <=5; ik++){
+			bellmanford(routing_diagram,ik);
+		}
 		pretty_print_routing_diagram(routing_diagram);
 		printf("DISPLAY SUCCESS\n");
 	}
+	/*
 	else if(strncmp(input,"print\n",40) == 0){
 		print_servers(peer_info_array);
 		//pretty_print_routing_diagram(routing_diagram);
 		//printf("DISPLAY SUCCESS\n");
 	}
+	*/
 	else if(strncmp(input,"display\n",40) == 0){
 		//mirror(routing_diagram);
+		int ij;
+		for(ij = 1; ij <=5; ij++){
+			bellmanford(routing_diagram,ij);
+		}
 		pretty_print_routing_diagram(routing_diagram);
 		printf("display SUCCESS\n");
 	}
 	else if(strncmp(input,"CRASH\n",40) == 0){
 		//broadcast(peer_info_array,routing_diagram,1,0);
+		printf("CRASH SUCCESS\n");
 		return 1;
 	}
 	else if(strncmp(input,"crash\n",40) == 0){
 		//broadcast(peer_info_array,routing_diagram,1,0);
+		printf("crash SUCCESS\n");
 		return 1;
 	}
 
@@ -666,6 +749,11 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		broadcast(peer_info_array,routing_diagram,2,temp);
 		routing_diagram[temp][who_am_i] = -1;
 		routing_diagram[who_am_i][temp] = -1;
+		int ki;
+		for(ki = 1; ki<=5; ki++){
+			bellmanford(routing_diagram,ki);
+		}
+		printf("disable %d SUCCESS\n", temp);
 	}
 	else if(strncmp(input,"DISABLE",40) == 0){
 		int temp = atoi(input2);
@@ -684,6 +772,11 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		broadcast(peer_info_array,routing_diagram,2,temp);
 		routing_diagram[temp][who_am_i] = -1;
 		routing_diagram[who_am_i][temp] = -1;
+		int ty;
+		for(ty =1;ty<=5;ty++){
+			bellmanford(routing_diagram,ty);
+		}
+		printf("DISABLE %d SUCCESS\n", temp);
 	}
 	else if(strncmp(input,"update",40) == 0){
 		if(input2 == NULL || input3 == NULL || input4 == NULL){
@@ -695,6 +788,10 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 			int i2 = atoi(input3);
 			routing_diagram[i2][i1] = -1;
 			routing_diagram[i1][i2] = -1;
+			int to;
+			for(to = 1; to<=5;to++){
+				bellmanford(routing_diagram,to);
+			}
 			printf("update SUCCESS\n");
 			return 0;
 		}
@@ -704,6 +801,10 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		int i3 = atoi(input4);
 		routing_diagram[i2][i1] = i3;
 		routing_diagram[i1][i2] = i3;
+		int tq;
+		for(tq = 1; tq<=5;tq++){
+			bellmanford(routing_diagram,tq);
+		}
 		printf("update SUCCESS\n");
 
 	}
@@ -717,6 +818,10 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 			int i2 = atoi(input3);
 			routing_diagram[i2][i1] = -1;
 			routing_diagram[i1][i2] = -1;
+			int tp;
+			for(tp = 1; tp<=5;tp++){
+				bellmanford(routing_diagram,tp);
+			}
 			printf("UPDATE SUCCESS\n");
 			return 0;
 		}
@@ -726,6 +831,10 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 		int i3 = atoi(input4);
 		routing_diagram[i2][i1] = i3;
 		routing_diagram[i1][i2] = i3;
+		int qt;
+		for(qt = 1; qt<=5;qt++){
+			bellmanford(routing_diagram,qt);
+		}
 		printf("UPDATE SUCCESS\n");
 
 	}
@@ -747,7 +856,7 @@ int run_command(char *fullinput, struct peer_info peer_info_array[5],int routing
 /*
 	Helper function to update the routing diagram when an update packet is recieved.
 */
-void update_routing_diagram(struct datagram mydatagram,struct peer_info peer_info_array[5],int routing_diagram[5][5]){
+void update_routing_diagram(struct datagram mydatagram,struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 
 	int count = mydatagram.num_of_fields;
 	uint16_t sender_id;
@@ -821,7 +930,8 @@ void update_routing_diagram(struct datagram mydatagram,struct peer_info peer_inf
 	appropriate function, and reading from an active listening socket, calling
 	functions as needed.
 */
-int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
+int server_start(struct peer_info peer_info_array[6],int routing_diagram[6][6]){
+	//printf("Im here\n");
 	fd_set master;
 	fd_set fd_readSockets;
 	FD_ZERO(&fd_readSockets);
@@ -907,10 +1017,23 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 				routing_diagram[mydatagram.recipient1_id][mydatagram.recipient2_id] = -1;
 				routing_diagram[mydatagram.recipient2_id][mydatagram.recipient1_id] = -1;
 				mirror(routing_diagram);
+				//int ix;
+				//for(ix =1; ix <=5;ix++){
+				int ix;
+				for(ix = 1; ix<=5;ix++){
+					bellmanford(routing_diagram,ix);
+				}
+				//mirror(routing_diagram);
+				//}
 				continue;
 			}
 			update_routing_diagram(mydatagram,peer_info_array,routing_diagram);
 			mirror(routing_diagram);
+			int ix;
+			for(ix =1; ix <=5;ix++){
+				bellmanford(routing_diagram,ix);
+			//mirror(routing_diagram);
+			}
 			time(&stop);
     		times = times + difftime(stop,start);
 		}
@@ -943,7 +1066,7 @@ int server_start(struct peer_info peer_info_array[5],int routing_diagram[5][5]){
 	Function to read from the specified topology file and use this
 	info to fill the initial data structures.
 */
-int read_top(char *top_file,struct peer_info peer_info_array[5],int routing_diagram[5][5]){
+int read_top(char *top_file,struct peer_info peer_info_array[6],int routing_diagram[6][6]){
 	
 	FILE * fp;
     char * line = NULL;
@@ -1053,8 +1176,8 @@ int main(int argc, char *argv[]){
 	strncpy(temptime,argv[4],sizeof(argv[4]) - sizeof("\n"));
 	time_interval = atoi(temptime);
 
-	struct peer_info *peer_info_array = malloc(sizeof(struct peer_info ) * 5);
-	int routing_diagram[5][5];
+	struct peer_info *peer_info_array = malloc(sizeof(struct peer_info ) * 6);
+	int routing_diagram[6][6];
 	int j;
 	int x;
 	for(x = 1; x <= 5; x++){
